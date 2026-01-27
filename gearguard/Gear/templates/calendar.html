@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+
+{% block title %}Maintenance Calendar - GearGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .legend {
+        display: flex;
+        gap: 1.5rem;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+    }
+
+    .legend-dot.preventive {
+        background-color: #3B82F6;
+    }
+
+    .legend-dot.corrective {
+        background-color: #F59E0B;
+    }
+
+    .nav-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .nav-btn {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        background: white;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .nav-btn:hover {
+        background: var(--bg-light);
+    }
+
+    .month-display {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .view-toggle {
+        display: flex;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+
+    .view-btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: white;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .view-btn.active {
+        background: var(--bg-light);
+    }
+
+    .view-btn:hover:not(.active) {
+        background: #f9fafb;
+    }
+
+    .calendar-grid {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .calendar-header {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        background: #f9fafb;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .calendar-header-cell {
+        padding: 1rem;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+
+    .calendar-body {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+    }
+
+    .calendar-cell {
+        min-height: 100px;
+        padding: 0.5rem;
+        border-right: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+        position: relative;
+    }
+
+    .calendar-cell:nth-child(7n) {
+        border-right: none;
+    }
+
+    .calendar-cell.other-month {
+        background: #fafafa;
+    }
+
+    .calendar-cell.today {
+        background: #EFF6FF;
+    }
+
+    .day-number {
+        font-weight: 500;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+
+    .today .day-number {
+        color: var(--primary-blue);
+        font-weight: 700;
+    }
+
+    .event {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        margin-bottom: 0.25rem;
+        color: white;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .event.preventive {
+        background-color: #3B82F6;
+    }
+
+    .event.corrective {
+        background-color: #F59E0B;
+    }
+
+    /* Agenda View */
+    .agenda-list {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+    }
+
+    .agenda-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        gap: 1rem;
+    }
+
+    .agenda-item:last-child {
+        border-bottom: none;
+    }
+
+    .agenda-date {
+        font-weight: 600;
+        min-width: 100px;
+        color: var(--text-primary);
+    }
+
+    .agenda-type {
+        width: 8px;
+        height: 40px;
+        border-radius: 4px;
+    }
+
+    .agenda-type.preventive {
+        background-color: #3B82F6;
+    }
+
+    .agenda-type.corrective {
+        background-color: #F59E0B;
+    }
+
+    .agenda-details {
+        flex: 1;
+    }
+
+    .agenda-title {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .agenda-equipment {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Maintenance Calendar</h1>
+
+<div class="calendar-controls">
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-dot preventive"></div>
+            <span>Preventive</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot corrective"></div>
+            <span>Corrective</span>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+        <div class="nav-buttons">
+            <button class="nav-btn" onclick="changeMonth(-1)">Back</button>
+            <button class="nav-btn" onclick="goToToday()">Today</button>
+            <button class="nav-btn" onclick="changeMonth(1)">Next</button>
+        </div>
+
+        <span class="month-display" id="monthDisplay">December 2025</span>
+    </div>
+
+    <div class="view-toggle">
+        <button class="view-btn active" data-view="month">Month</button>
+        <button class="view-btn" data-view="agenda">Agenda</button>
+    </div>
+</div>
+
+<!-- Month View -->
+<div id="monthView" class="calendar-grid">
+    <div class="calendar-header">
+        <div class="calendar-header-cell">Sun</div>
+        <div class="calendar-header-cell">Mon</div>
+        <div class="calendar-header-cell">Tue</div>
+        <div class="calendar-header-cell">Wed</div>
+        <div class="calendar-header-cell">Thu</div>
+        <div class="calendar-header-cell">Fri</div>
+        <div class="calendar-header-cell">Sat</div>
+    </div>
+    <div class="calendar-body" id="calendarBody">
+        <!-- Dynamically generated -->
+    </div>
+</div>
+
+<!-- Agenda View -->
+<div id="agendaView" class="agenda-list" style="display: none;">
+    {% for r in requests %}
+    <div class="agenda-item">
+        <div class="agenda-date">{{ r.scheduled_date|date:"M d, Y" }}</div>
+        <div class="agenda-type {% if r.request_type == 'PRE' %}preventive{% else %}corrective{% endif %}"></div>
+        <div class="agenda-details">
+            <div class="agenda-title">{{ r.subject }}</div>
+            <div class="agenda-equipment">{{ r.equipment.name }}</div>
+        </div>
+        <span class="priority-badge badge-{{ r.priority|default:'medium' }}">{{ r.get_status_display }}</span>
+    </div>
+    {% empty %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-calendar-x" style="font-size: 2rem;"></i>
+        <p class="mt-2 mb-0">No scheduled maintenance requests.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Parse events from Django
+    var events = JSON.parse('{{ events|default:"[]"|escapejs }}');
+    var currentDate = new Date();
+
+    function renderCalendar() {
+        var year = currentDate.getFullYear();
+        var month = currentDate.getMonth();
+
+        // Update month display
+        var monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        document.getElementById('monthDisplay').textContent = monthNames[month] + ' ' + year;
+
+        // Get first day of month and total days
+        var firstDay = new Date(year, month, 1).getDay();
+        var daysInMonth = new Date(year, month + 1, 0).getDate();
+        var daysInPrevMonth = new Date(year, month, 0).getDate();
+
+        var today = new Date();
+        var calendarBody = document.getElementById('calendarBody');
+        calendarBody.innerHTML = '';
+
+        // Calculate total cells needed (6 rows max)
+        var totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+
+        for (var i = 0; i < totalCells; i++) {
+            var cell = document.createElement('div');
+            cell.className = 'calendar-cell';
+
+            var dayNum;
+            var cellDate;
+
+            if (i < firstDay) {
+                // Previous month
+                dayNum = daysInPrevMonth - firstDay + i + 1;
+                cellDate = new Date(year, month - 1, dayNum);
+                cell.classList.add('other-month');
+            } else if (i >= firstDay + daysInMonth) {
+                // Next month
+                dayNum = i - firstDay - daysInMonth + 1;
+                cellDate = new Date(year, month + 1, dayNum);
+                cell.classList.add('other-month');
+            } else {
+                // Current month
+                dayNum = i - firstDay + 1;
+                cellDate = new Date(year, month, dayNum);
+
+                // Check if today
+                if (cellDate.toDateString() === today.toDateString()) {
+                    cell.classList.add('today');
+                }
+            }
+
+            cell.innerHTML = '<div class="day-number">' + dayNum + '</div>';
+
+            // Add events
+            var dateStr = cellDate.toISOString().split('T')[0];
+            var dayEvents = events.filter(function (e) { return e.date === dateStr; });
+
+            dayEvents.forEach(function (event) {
+                var eventEl = document.createElement('div');
+                eventEl.className = 'event ' + (event.type === 'PRE' ? 'preventive' : 'corrective');
+                eventEl.textContent = event.title;
+                eventEl.title = event.equipment + ': ' + event.subject;
+                cell.appendChild(eventEl);
+            });
+
+            calendarBody.appendChild(cell);
+        }
+    }
+
+    function changeMonth(delta) {
+        currentDate.setMonth(currentDate.getMonth() + delta);
+        renderCalendar();
+    }
+
+    function goToToday() {
+        currentDate = new Date();
+        renderCalendar();
+    }
+
+    // View toggle
+    document.querySelectorAll('.view-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.view-btn').forEach(function (b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+
+            var view = btn.dataset.view;
+            document.getElementById('monthView').style.display = view === 'month' ? 'block' : 'none';
+            document.getElementById('agendaView').style.display = view === 'agenda' ? 'block' : 'none';
+        });
+    });
+
+    // Initial render
+    renderCalendar();
+</script>
+{% endblock %}

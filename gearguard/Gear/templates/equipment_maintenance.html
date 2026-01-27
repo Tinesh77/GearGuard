@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ equipment.name }} - Maintenance - GearGuard{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'equipment_list' %}" class="text-decoration-none" style="color: var(--primary-blue);">
+        <i class="bi bi-arrow-left me-1"></i> Back to Equipment
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Equipment Details Card -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h4 style="font-weight: 700;">{{ equipment.name }}</h4>
+                        <small class="text-muted">{{ equipment.serial_number }}</small>
+                    </div>
+                    {% if equipment.is_scrapped %}
+                    <span class="priority-badge badge-scrapped">scrapped</span>
+                    {% else %}
+                    <span class="priority-badge badge-active">active</span>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <div class="mb-2">
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem;">Category</strong>
+                        <div>{{ equipment.category }}</div>
+                    </div>
+                    <div class="mb-2">
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem;">Department</strong>
+                        <div>{{ equipment.department }}</div>
+                    </div>
+                    <div class="mb-2">
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem;">Location</strong>
+                        <div>{{ equipment.location }}</div>
+                    </div>
+                    <div class="mb-2">
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem;">Maintenance Team</strong>
+                        <div>{{ equipment.maintenance_team.name|default:"Unassigned" }}</div>
+                    </div>
+                    <div class="mb-2">
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem;">Purchase Date</strong>
+                        <div>{{ equipment.purchase_date|date:"M d, Y" }}</div>
+                    </div>
+                    {% if equipment.warranty_expiry %}
+                    <div class="mb-2">
+                        <strong style="color: var(--text-secondary); font-size: 0.8rem;">Warranty Expiry</strong>
+                        <div>{{ equipment.warranty_expiry|date:"M d, Y" }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <span style="font-weight: 600;">Open Requests</span>
+                    <span class="badge bg-primary rounded-pill" style="font-size: 1rem;">{{
+                        equipment.open_requests_count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Maintenance Requests -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0" style="font-weight: 600;">Maintenance History</h5>
+                {% if not equipment.is_scrapped %}
+                <a href="{% url 'admin:Gear_maintenancerequest_add' %}?equipment={{ equipment.id }}"
+                    class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-lg me-1"></i> New Request
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Request</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Scheduled</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in requests %}
+                            <tr>
+                                <td>
+                                    <strong>{{ r.subject }}</strong>
+                                    <br><small class="text-muted">{{ r.request_id }}</small>
+                                </td>
+                                <td>
+                                    <span
+                                        class="badge {% if r.request_type == 'COR' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                        {{ r.get_request_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge 
+                                        {% if r.status == 'NEW' %}bg-primary
+                                        {% elif r.status == 'PRO' %}bg-warning text-dark
+                                        {% elif r.status == 'REP' %}bg-success
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ r.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="priority-badge badge-{{ r.priority }}">{{ r.priority }}</span>
+                                </td>
+                                <td>{{ r.scheduled_date|date:"M d, Y"|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                    <p class="mt-2 mb-0">No maintenance requests for this equipment.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

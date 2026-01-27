@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - GearGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-container {
+        animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stat-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid var(--border-color);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+        border-color: var(--primary-blue);
+    }
+
+    .stat-icon {
+        position: absolute;
+        right: -10px;
+        bottom: -10px;
+        font-size: 4rem;
+        opacity: 0.1;
+        transform: rotate(-15deg);
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover .stat-icon {
+        transform: rotate(0deg) scale(1.1);
+        opacity: 0.15;
+    }
+
+    .card {
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        height: 100%;
+    }
+
+    .card-header-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        margin-right: 12px;
+    }
+
+    .bg-blue-light {
+        background-color: #DBEAFE;
+        color: #1E40AF;
+    }
+
+    .bg-yellow-light {
+        background-color: #FEF3C7;
+        color: #92400E;
+    }
+
+    .bg-green-light {
+        background-color: #D1FAE5;
+        color: #059669;
+    }
+
+    .bg-red-light {
+        background-color: #FEE2E2;
+        color: #991B1B;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #F9FAFB;
+    }
+
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        color: var(--text-secondary);
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .badge-pill {
+        padding: 0.4em 0.8em;
+        border-radius: 50px;
+        font-weight: 600;
+    }
+
+    .team-avatar {
+        width: 32px;
+        height: 32px;
+        background-color: var(--primary-blue);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: bold;
+        font-size: 0.8rem;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="page-title mb-0">Dashboard Overview</h1>
+        <div class="text-muted small">
+            <i class="bi bi-clock-history me-1"></i> Last updated: {% now "H:i" %}
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card stat-card p-4">
+                <div>
+                    <div class="stat-label">Total Requests</div>
+                    <div class="stat-value">{{ total_requests }}</div>
+                </div>
+                <i class="bi bi-list-task stat-icon"></i>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card stat-card p-4">
+                <div>
+                    <div class="stat-label" style="color: #3b82f6">New Requests</div>
+                    <div class="stat-value blue">{{ new_count }}</div>
+                </div>
+                <i class="bi bi-plus-circle stat-icon text-primary"></i>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card stat-card p-4">
+                <div>
+                    <div class="stat-label" style="color: #f59e0b">In Progress</div>
+                    <div class="stat-value yellow">{{ in_progress_count }}</div>
+                </div>
+                <i class="bi bi-gear-wide-connected stat-icon text-warning"></i>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card stat-card p-4">
+                <div>
+                    <div class="stat-label" style="color: #ef4444">Overdue Tasks</div>
+                    <div class="stat-value red">{{ overdue_count }}</div>
+                </div>
+                <i class="bi bi-exclamation-triangle stat-icon text-danger"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Tables Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card p-0 overflow-hidden">
+                <div class="card-header bg-white p-4 border-0 d-flex align-items-center">
+                    <div class="card-header-icon bg-blue-light">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <h5 class="mb-0" style="font-weight: 600">Requests by Team</h5>
+                </div>
+                <div class="table-responsive p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr class="px-4">
+                                <th class="ps-4">Team Name</th>
+                                <th class="text-end pe-4">Workload</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="team-avatar">A</div>
+                                        <div>
+                                            <div class="fw-bold">Team Alpha</div>
+                                            <small class="text-muted">Primary Maintenance</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <span class="badge bg-primary rounded-pill px-3">{{ team_a_count }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="team-avatar" style="background-color: #8B5CF6;">B</div>
+                                        <div>
+                                            <div class="fw-bold">Team Bravo</div>
+                                            <small class="text-muted">Specialized Repairs</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <span class="badge bg-info rounded-pill px-3">{{ team_b_count }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-white p-3 border-top text-center">
+                    <a href="#" class="btn btn-link btn-sm text-decoration-none">View Team Analytics</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card p-0 overflow-hidden">
+                <div class="card-header bg-white p-4 border-0 d-flex align-items-center">
+                    <div class="card-header-icon bg-yellow-light">
+                        <i class="bi bi-pie-chart-fill"></i>
+                    </div>
+                    <h5 class="mb-0" style="font-weight: 600">Requests by Stage</h5>
+                </div>
+                <div class="table-responsive p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Current Stage</th>
+                                <th class="text-center">Distribution</th>
+                                <th class="text-end pe-4">Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="priority-badge" style="background-color: #DBEAFE; color: #1E40AF;">In
+                                        Progress</span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-primary" style="width: 45%;"></div>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-4 fw-bold">{{ in_progress_count }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="priority-badge"
+                                        style="background-color: #FEF3C7; color: #92400E;">New</span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-warning" style="width: 25%;"></div>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-4 fw-bold">{{ new_count }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="priority-badge"
+                                        style="background-color: #D1FAE5; color: #059669;">Repaired</span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-success" style="width: 20%;"></div>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-4 fw-bold">{{ repaired_count }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="priority-badge"
+                                        style="background-color: #FEE2E2; color: #991B1B;">Scrap</span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-danger" style="width: 10%;"></div>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-4 fw-bold">{{ scrap_count }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Equipment Overview -->
+    <div class="card p-0 overflow-hidden mb-4">
+        <div class="card-header bg-white p-4 border-0 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="card-header-icon bg-green-light">
+                    <i class="bi bi-tools"></i>
+                </div>
+                <h5 class="mb-0" style="font-weight: 600">Equipment Overview</h5>
+            </div>
+            <a href="{% url 'equipment_list' %}" class="btn btn-outline-primary btn-sm">
+                View All Equipment
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Equipment Details</th>
+                        <th>Category</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Open Requests</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for equipment in equipment_list %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold">{{ equipment.name }}</div>
+                            <small class="text-muted">{{ equipment.serial_number }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ equipment.category }}</span>
+                        </td>
+                        <td>
+                            <i class="bi bi-geo-alt me-1 text-muted"></i>{{ equipment.location }}
+                        </td>
+                        <td>
+                            {% if equipment.is_scrapped %}
+                            <span class="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill">
+                                <i class="bi bi-trash3 me-1"></i>Scrapped
+                            </span>
+                            {% else %}
+                            <span class="badge bg-success-subtle text-success px-3 py-2 rounded-pill">
+                                <i class="bi bi-check-circle me-1"></i>Active
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            {% if equipment.open_requests_count > 3 %}
+                            <span class="text-danger fw-bold">{{ equipment.open_requests_count }}</span>
+                            {% else %}
+                            <span class="fw-bold">{{ equipment.open_requests_count }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="p-5 text-center">
+                            <i class="bi bi-info-circle fs-2 text-muted mb-3 d-block"></i>
+                            <div class="text-muted">No equipment found. Add some to get started.</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

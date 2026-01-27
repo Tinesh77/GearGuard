@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+
+{% block title %}Maintenance Requests - GearGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+  .kanban-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    min-height: 500px;
+  }
+
+  @media (max-width: 1200px) {
+    .kanban-container {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .kanban-container {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .kanban-column {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+  }
+
+  .column-header {
+    padding: 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .column-header.new {
+    background: linear-gradient(to right, #DBEAFE, #EFF6FF);
+    color: #1E40AF;
+  }
+
+  .column-header.in-progress {
+    background: linear-gradient(to right, #FEF3C7, #FFFBEB);
+    color: #92400E;
+  }
+
+  .column-header.repaired {
+    background: linear-gradient(to right, #F3F4F6, #FAFAFA);
+    color: #374151;
+  }
+
+  .column-header.scrap {
+    background: linear-gradient(to right, #FEE2E2, #FEF2F2);
+    color: #991B1B;
+  }
+
+  .column-count {
+    font-weight: 400;
+    opacity: 0.8;
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+
+  .column-body {
+    padding: 0.75rem;
+    min-height: 400px;
+    background: #FAFAFA;
+  }
+
+  .request-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    cursor: grab;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+
+  .request-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .request-card.dragging {
+    opacity: 0.5;
+    transform: rotate(3deg);
+  }
+
+  .request-card .card-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+  }
+
+  .request-card .card-equipment {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+
+  .request-card .card-id {
+    font-size: 0.7rem;
+    color: #9CA3AF;
+    margin-top: 0.5rem;
+  }
+
+  .column-body.drag-over {
+    background: #E0F2FE;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="page-title mb-0">Maintenance Requests</h1>
+  <a href="{% url 'admin:Gear_maintenancerequest_add' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> New Request
+  </a>
+</div>
+
+<div class="kanban-container">
+  {% for status, title in statuses %}
+  <div class="kanban-column">
+    <div
+      class="column-header {% if status == 'NEW' %}new{% elif status == 'PRO' %}in-progress{% elif status == 'REP' %}repaired{% else %}scrap{% endif %}">
+      {{ title }}
+      <span class="column-count">{{ status_counts|default_if_none:0 }} requests</span>
+    </div>
+    <div class="column-body" data-status="{{ status }}">
+      {% for r in requests %}
+      {% if r.status == status %}
+      <div class="request-card" draggable="true" data-id="{{ r.id }}">
+        {% if r.is_overdue %}
+        <span class="badge-overdue mb-2 d-inline-block">OVERDUE</span>
+        {% endif %}
+
+        <div class="card-title">{{ r.subject }}</div>
+        <div class="card-equipment">{{ r.equipment.name }}</div>
+
+        <span class="priority-badge badge-{{ r.priority }}">{{ r.priority }}</span>
+
+        <div class="card-id">{{ r.request_id }}</div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // CSRF Token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+  // Kanban Drag and Drop
+  const cards = document.querySelectorAll('.request-card');
+  const columns = document.querySelectorAll('.column-body');
+
+  cards.forEach(card => {
+    card.addEventListener('dragstart', e => {
+      card.classList.add('dragging');
+      e.dataTransfer.setData('id', card.dataset.id);
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+    });
+  });
+
+  columns.forEach(column => {
+    column.addEventListener('dragover', e => {
+      e.preventDefault();
+      column.classList.add('drag-over');
+    });
+
+    column.addEventListener('dragleave', () => {
+      column.classList.remove('drag-over');
+    });
+
+    column.addEventListener('drop', e => {
+      e.preventDefault();
+      column.classList.remove('drag-over');
+
+      const id = e.dataTransfer.getData('id');
+      const status = column.dataset.status;
+
+      // Send update to server
+      fetch("{% url 'update_status' %}", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrftoken,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: `id=${id}&status=${status}`
+      })
+        .then(async response => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            // Show error toast
+            showToast(data.error || "Action not allowed", "error");
+          } else {
+            // Reload to show updated state
+            location.reload();
+          }
+        })
+        .catch(err => {
+          showToast("Network error occurred", "error");
+        });
+    });
+  });
+
+  // Toast notification
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : 'success'} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="bi bi-${type === 'error' ? 'x-circle' : 'check-circle'} me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.remove();
+    }, 4000);
+  }
+</script>
+{% endblock %}
